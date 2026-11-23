@@ -1,0 +1,447 @@
+[1;34m=====================================================================[0m
+[1;34m  PIPELINE COMPLETO — UNICEF Colombia (v8)[0m
+[1;34m  Thu  3 Sep 2026 21:12:49 EDT[0m
+[1;34m  ROOT        = /Users/fvelasg/Documents/dev/unicef_ml/v9_entregable[0m
+[1;34m  CUTOFF_DATE = 2025-12-31  (frontera de información: ventanas y splits)[0m
+[1;34m  RUN_DATE    = 2026-01-03  (hoy: desde aquí se proyectan las fechas de cobro)[0m
+[1;34m=====================================================================[0m
+
+[1;34m[SKIP] 00 · unify_raw_data — salida ya existe (payments_unified.parquet)[0m
+
+[1;34m[VERIFICAR] contact_unified[0m
+  filas:    503,098 (esperado 503,098)   cols: 158 (esperado 158)   OK
+
+[1;34m[VERIFICAR] opportunity_unified[0m
+  filas:  2,917,121 (esperado 2,917,121)   cols: 72 (esperado 72)   OK
+
+[1;34m[VERIFICAR] pledge_unified[0m
+  filas:    464,807 (esperado 464,807)   cols: 117 (esperado 117)   OK
+
+[1;34m[VERIFICAR] payments_unified[0m
+  filas:  5,566,032 (esperado 5,566,032)   cols: 36 (esperado 36)   OK
+
+[1;34m[VERIFICAR] allocation_unified[0m
+  filas:    276,004 (esperado 276,004)   cols: 67 (esperado 67)   OK
+
+[1;34m[SKIP] 01 · create_staging — salida ya existe (stg_payment_attempts.parquet)[0m
+
+[1;34m[VERIFICAR] stg_payment_attempts[0m
+  filas:  5,309,073 (esperado 5,309,073)   cols: 17 (esperado 17)   OK
+
+[1;34m[SKIP] M1 · clean_bank_normalization — salida ya existe (bank_canonical.parquet)[0m
+
+[1;34m[VERIFICAR] bank_canonical[0m
+  filas:  5,309,073 (esperado 5,309,073)   cols: 1 (esperado 1)   OK
+
+[1;34m[SKIP] M1 · enrich_with_contact — salida ya existe (motor1_features.parquet)[0m
+
+[1;34m[VERIFICAR] motor1_features[0m
+  filas:  5,309,073 (esperado 5,309,073)   cols: 20 (esperado 20)   OK
+
+[1;34m[SKIP] M1 · build_allocation_features — salida ya existe (allocation_features.parquet)[0m
+
+[1;34m[VERIFICAR] allocation_features[0m
+  filas:  5,309,073 (esperado 5,309,073)   cols: 15 (esperado 15)   OK
+
+[1;34m--------------------------------------------------------------------[0m
+[1;34m[ETAPA] M2 · motor2_dataset[0m
+[1;33m> python3 "/Users/fvelasg/Documents/dev/unicef_ml/v9_entregable/scripts/02_features_motor2/01_motor2_dataset.py" --cutoff-date 2025-12-31[0m
+[1;34m--------------------------------------------------------------------[0m
+  [config] CUTOFF_DATE = 2025-12-31  (fuente: CLI)
+  Ventana de snapshots: 2024-01 → 2025-12 (24 mes(es))
+  Salida: /Users/ferneyiridian/Documents/dev/unicef_ml/v9_entregable/data/features/motor2_pledge_month.parquet
+[1/5] Cargando pledges y staging...
+  staging filas: 5,309,073 | pledges: 464,807
+  Último intento en staging: 2025-12-31
+[2/5] Determinando ventana activa por pledge...
+[3/5] Generando snapshots mensuales (vectorizado)...
+  Meses considerados: 24
+  Pledges con start válido: 464,807
+  Filas cross-product brutas: 11,155,368
+  Snapshots válidos: 2,548,075
+  Tasa churn 30d global: 0.0392
+[4/5] Calculando features con merge_asof y groupby (esto puede tardar 1-2 min)...
+  asof OK: (2548075, 9)
+  Calculando agregados por ventana...
+  agg_mes filas: 2,434,775
+  cum OK: (2548075, 8)
+  Calculando streak_actual...
+[5/5] Ensamblando features finales...
+  Resolviendo contact_id por pledge...
+  [AVISO] 1 pledges con más de un contact_id distinto en su historial — resuelto tomando el más frecuente.
+  [AVISO] 23,828 filas (0.94%) sin contact_id resuelto (pledge sin intentos en el staging).
+  filas finales: 2,548,075, cols: ['pledge_id', 'snapshot_ts', 'label_churn_30d', 'days_since_last_attempt', 'last_attempt_success', 'last_payment_amount', 'last_payment_method', 'last_bank_name', 'last_gateway', 'cum_intentos', 'cum_exitos', 'cum_fallos', 'success_rate_hist', 'n_intentos_30d', 'n_exitos_30d', 'n_fallos_30d', 'streak_actual', 'tenure_days', 'contact_id']
+  Tasa churn 30d global: 0.0392
+  Por año:
+                   n      tasa
+snapshot_ts                   
+2024         1173916  0.044255
+2025         1374159  0.034815
+
+[OK] /Users/ferneyiridian/Documents/dev/unicef_ml/v9_entregable/data/features/motor2_pledge_month.parquet
+[1;32m[OK] M2 · motor2_dataset  (17s)[0m
+
+[1;34m[VERIFICAR] motor2_pledge_month[0m
+  filas:  2,548,075 (esperado 2,548,075)   cols: 19 (esperado 19)   OK
+
+[1;34m--------------------------------------------------------------------[0m
+[1;34m[ETAPA] M1 · train_motor1[0m
+[1;33m> python3 "/Users/fvelasg/Documents/dev/unicef_ml/v9_entregable/scripts/03_train/01_train_motor1.py" --cutoff-date 2025-12-31[0m
+[1;34m--------------------------------------------------------------------[0m
+  [config] CUTOFF_DATE = 2025-12-31  (fuente: CLI)
+[1/4] Cargando train (años 2022-2024, sample_frac=1.0)...
+  Train: 2,327,921
+  [OK anti-leakage] train 2022-2024: days≥0 y conteos monótonos + shift(1) verificado en el primer intento (166,270 pledges validados).
+[2/4] Entrenando CatBoost con Allocation features (auto_class_weights)...
+0:	test: 0.8796667	best: 0.8796667 (0)	total: 385ms	remaining: 1m 8s
+30:	test: 0.9023309	best: 0.9023309 (30)	total: 8.28s	remaining: 39.8s
+60:	test: 0.9033404	best: 0.9051225 (49)	total: 16.2s	remaining: 31.6s
+Stopped by overfitting detector  (15 iterations wait)
+
+bestTest = 0.9051225307
+bestIteration = 49
+
+Shrink model to first 50 iterations.
+  [calibración] Entrenando IsotonicRegression sobre validation set...
+  [calibración] ECE val — antes: 0.0167  →  después: 0.0000  (mejora: +0.0167)
+[3/4] Cargando test 2025...
+  Test: 2,981,152
+  [OK anti-leakage] test 2025: days≥0 y conteos monótonos (177,883 pledges validados).
+  [calibración] ECE test — antes: 0.0180  →  después: 0.0229
+
+[4/4] RESULTADOS Motor 1 (con Allocation, auto_class_weights):
+  AUC:                       0.9115
+  AUC v3 (referencia):       0.9074
+  Lift vs v3:                +0.0041
+  AUC baseline (lookup):     0.8771
+  Lift vs baseline:          +0.0343
+  PR-AUC: 0.8676 | Brier crudo: 0.1125 → calibrado: 0.1132
+  ECE test  — antes: 0.0180  →  después: 0.0229
+  AUC subset CON allocations: 0.9210 (n=1,379,883)
+  AUC subset SIN allocations: 0.9031 (n=1,601,269)
+  Top 12 features:
+    pre_failure_streak                  23.60%
+    failure_count_cum                   16.43%
+    days_since_last_attempt             14.46%
+    day_of_month                        13.61%
+    day_of_week                         10.56%
+    month                               5.65%
+    success_count_cum                   5.58%
+    payment_gateway                     3.81%
+    ses_level                           2.45%
+    contact_age_days                    1.90%
+    payment_method                      1.41%
+    alloc_days_since_last               0.36% 🆕
+[1;32m[OK] M1 · train_motor1  (51s)[0m
+
+[1;34m--------------------------------------------------------------------[0m
+[1;34m[ETAPA] M2 · train_motor2[0m
+[1;33m> python3 "/Users/fvelasg/Documents/dev/unicef_ml/v9_entregable/scripts/03_train/02_train_motor2.py" --cutoff-date 2025-12-31[0m
+[1;34m--------------------------------------------------------------------[0m
+  [config] CUTOFF_DATE = 2025-12-31  (fuente: CLI)
+[1/4] Cargando dataset pledge × mes...
+  Filas: 2,548,075
+  Pledges únicos: 224,261
+  Tasa churn 30d: 0.0392
+  Snapshots del dataset: 2024-01 → 2025-12
+  train (snapshots <= 2024): 1,173,916
+  test (snapshots 2025): 1,374,159
+  Meses train: 2024-01 → 2024-12
+  Meses test:  2025-01 → 2025-12
+  Tasa churn train: 0.0443
+  Tasa churn test:  0.0348
+  [OK anti-leakage] train (snapshots <= 2024): days≥0, conteos monótonos, tenure≥0 (149,622 pledges validados).
+  [OK anti-leakage] test (snapshots 2025): days≥0, conteos monótonos, tenure≥0 (171,998 pledges validados).
+  Pledges en train: 149,622
+  Pledges en test:  171,998
+  Overlap (esperado, pledges activos en ambos años): 97,359 (56.6% del test)
+[2/4] Baselines triviales...
+  B0: AUC=0.5000  Brier=0.0337
+  B1 (streak): AUC=0.8220  Brier=0.0300
+  B2 (tenure): AUC=0.6689  Brier=0.0332
+[3/4] Entrenando CatBoost (v3: sin pesos de clase, lr=0.03)...
+  [split] validación = últimos 2 mes(es) del train (desde 2024-11): 201,675 filas (17%)
+  [split] tasa del evento — train 0.0454 | val 0.0387 | último mes 0.0408
+0:	test: 0.8850445	best: 0.8850445 (0)	total: 215ms	remaining: 2m 51s
+100:	test: 0.9013172	best: 0.9013172 (100)	total: 13.5s	remaining: 1m 33s
+200:	test: 0.9046507	best: 0.9046507 (200)	total: 28.1s	remaining: 1m 23s
+300:	test: 0.9061215	best: 0.9061215 (300)	total: 42.4s	remaining: 1m 10s
+Stopped by overfitting detector  (15 iterations wait)
+
+bestTest = 0.9067459981
+bestIteration = 362
+
+Shrink model to first 363 iterations.
+  Árboles usados (best_iteration): 362
+  [calibración] Entrenando IsotonicRegression sobre validation set...
+  [calibración] ECE val — antes: 0.0090  →  después: 0.0000  (mejora: +0.0090)
+[4/4] Evaluando...
+  [calibración] ECE test — antes: 0.0079  →  después: 0.0023
+  --- ¿el número se puede leer literal? (tasa base 3.48%) ---
+       tramo   promete    ocurre     error    lift
+    top_1pct    67.1%     59.6%     +7.6%  17.11x
+    top_5pct    46.4%     44.4%     +2.1%  12.74x
+   top_10pct    27.7%     26.7%     +1.1%   7.65x
+   top_20pct    14.9%     14.6%     +0.4%   4.18x
+
+  Corte: 2025-12-31  |  train <= 2024  |  test 2025  |  modo: evaluacion
+  CatBoost AUC (calibrado):    0.9028
+  Baseline B1 AUC (streak):    0.8220
+  Baseline B2 AUC (tenure):    0.6689
+  Lift vs B1:                  +0.0807
+  Lift vs B2:                  +0.2338
+  PR-AUC:                      0.4088
+  Brier crudo: 0.0251  →  calibrado: 0.0241
+  ECE test   — antes: 0.0079  →  después: 0.0023
+  Recall @ top 20%:            0.8525
+  Precision @ top 20%:         0.1277
+  Predicciones escritas: 1,374,159 filas (2025-01 → 2025-12)
+  Top features: [{'feature': 'success_rate_hist', 'importance': 25.462075486486686}, {'feature': 'tenure_days', 'importance': 23.703323241690377}, {'feature': 'streak_actual', 'importance': 22.299191326388684}, {'feature': 'days_since_last_attempt', 'importance': 7.224473674734966}, {'feature': 'cum_exitos', 'importance': 5.751097446170703}]
+[1;32m[OK] M2 · train_motor2  (62s)[0m
+
+[1;34m--------------------------------------------------------------------[0m
+[1;34m[ETAPA] M2d · motor2_dataset_donante[0m
+[1;33m> python3 "/Users/fvelasg/Documents/dev/unicef_ml/v9_entregable/scripts/02_features_motor2/01b_motor2_dataset_donante.py"[0m
+[1;34m--------------------------------------------------------------------[0m
+[1/3] Cargando dataset pledge-level (ya con anti-leakage resuelto)...
+  Filas pledge-level: 2,548,075  |  pledges: 224,261
+[2/3] Resolviendo contact_id...
+  contact_id ya viene en el dataset pledge-level (no se relee el staging).
+  [AVISO] 23,828 filas (0.94%) sin contact_id — se EXCLUYEN (pledges sin intentos en el staging).
+  Filas con contact_id: 2,524,247  |  donantes: 208,353
+[3/3] Agregando a nivel (contact_id, snapshot_ts)...
+  Filas donante-level: 2,515,029  (vs 2,524,247 pledge-level → reducción de 0.4%)
+  Pledges por donante-snapshot — media: 1.004  máx: 6
+  Tasa churn 30d — pledge-level: 0.0365  donante-level: 0.0362
+  (se espera que la tasa donante-level sea MENOR o igual: cancelar TODOS los pledges es un evento más raro que cancelar UNO)
+  Donante-snapshots con >1 pledge activo: 8,882 (0.35%)
+  Tasa churn en ESE subconjunto (donde el cambio importa): 0.0197
+
+  Por año:
+                   n      tasa
+snapshot_ts                   
+2024         1156238  0.039977
+2025         1358791  0.032931
+
+[OK] /Users/ferneyiridian/Documents/dev/unicef_ml/v9_entregable/data/features/motor2_donante_month.parquet
+  Columnas (18): ['contact_id', 'snapshot_ts', 'n_pledges_activos', 'monto_total_mensual', 'streak_max', 'streak_promedio', 'tenure_max', 'tenure_min', 'cum_intentos_total', 'cum_exitos_total', 'cum_fallos_total', 'n_intentos_30d_total', 'n_fallos_30d_total', 'days_since_last_attempt_min', 'n_bancos_distintos', 'n_metodos_distintos', 'label_churn_30d', 'success_rate_hist_pond']
+[1;32m[OK] M2d · motor2_dataset_donante  (4s)[0m
+  Dataset donante: data/features/motor2_donante_month.parquet
+
+[1;34m--------------------------------------------------------------------[0m
+[1;34m[ETAPA] M2d · train_motor2_donante[0m
+[1;33m> python3 "/Users/fvelasg/Documents/dev/unicef_ml/v9_entregable/scripts/03_train/02b_train_motor2_donante.py" --cutoff-date 2025-12-31[0m
+[1;34m--------------------------------------------------------------------[0m
+  [config] CUTOFF_DATE = 2025-12-31  (fuente: CLI)
+[1/4] Cargando dataset donante × mes...
+  Filas: 2,515,029  |  donantes únicos: 208,353
+  Tasa churn 30d (donante): 0.0362
+  Snapshots del dataset: 2024-01 → 2025-12
+  train (snapshots <= 2024): 1,156,238
+  test (snapshots 2025): 1,358,791
+  Meses train: 2024-01 → 2024-12
+  Meses test:  2025-01 → 2025-12
+  Tasa churn train: 0.0400
+  Tasa churn test:  0.0329
+  [OK anti-leakage] train (snapshots <= 2024): days≥0, tenure≥0 (141,302 donantes validados).
+  [diagnóstico] cum_intentos_total decrece en 1,141 filas (0.10%) — esperado cuando un pledge sale del conjunto activo del donante, NO es un fallo de anti-leakage por sí solo.
+  [OK anti-leakage] test (snapshots 2025): days≥0, tenure≥0 (165,961 donantes validados).
+  [diagnóstico] cum_intentos_total decrece en 2,265 filas (0.17%) — esperado cuando un pledge sale del conjunto activo del donante, NO es un fallo de anti-leakage por sí solo.
+  Donantes en train: 141,302
+  Donantes en test:  165,961
+  Overlap (esperado, donantes activos en ambos años): 98,910 (59.6% del test)
+[2/4] Baselines triviales (adaptados a donante)...
+  B0_constante: AUC=0.5000  Brier=0.0319
+  B1_lookup_streak_max: AUC=0.8448  Brier=0.0282
+  B2_lookup_tenure_max: AUC=0.6541  Brier=0.0315
+  B3_lookup_n_pledges: AUC=0.5006  Brier=0.0319
+[3/4] Entrenando CatBoost (misma config de producción: sin pesos, lr=0.03)...
+  [split] validación = últimos 2 mes(es) del train (desde 2024-11): 199,374 filas (17%)
+  [split] tasa del evento — train 0.0406 | val 0.0371 | último mes 0.0393
+0:	test: 0.8838732	best: 0.8838732 (0)	total: 92.6ms	remaining: 1m 13s
+100:	test: 0.9020823	best: 0.9021548 (99)	total: 3.7s	remaining: 25.6s
+200:	test: 0.9054423	best: 0.9054423 (200)	total: 7.29s	remaining: 21.7s
+300:	test: 0.9066587	best: 0.9066587 (300)	total: 10.8s	remaining: 17.9s
+Stopped by overfitting detector  (15 iterations wait)
+
+bestTest = 0.9072653178
+bestIteration = 362
+
+Shrink model to first 363 iterations.
+  Árboles usados (best_iteration): 362
+  [calibración] Entrenando IsotonicRegression sobre validation set...
+  [calibración] ECE val — antes: 0.0068  →  después: 0.0000  (mejora: +0.0068)
+[4/4] Evaluando...
+  [calibración] ECE test — antes: 0.0049  →  después: 0.0053
+  --- ¿el número se puede leer literal? (tasa base 3.29%) ---
+       tramo   promete    ocurre     error    lift
+    top_1pct    66.7%     55.8%    +10.9%  16.93x
+    top_5pct    47.1%     39.9%     +7.3%  12.11x
+   top_10pct    29.0%     24.9%     +4.2%   7.55x
+   top_20pct    15.5%     13.7%     +1.8%   4.16x
+
+  Corte: 2025-12-31  |  train <= 2024  |  test 2025  |  modo: evaluacion
+  CatBoost AUC (calibrado):    0.8984
+  B0_constante             AUC=0.5000   lift=+0.3984
+  B1_lookup_streak_max     AUC=0.8448   lift=+0.0536
+  B2_lookup_tenure_max     AUC=0.6541   lift=+0.2444
+  B3_lookup_n_pledges      AUC=0.5006   lift=+0.3979
+  PR-AUC:                      0.3769  (tasa base 0.0329)
+  Brier crudo: 0.0241  →  calibrado: 0.0240
+  Recall @ top 20%:            0.8398
+  Precision @ top 20%:         0.1306
+  Predicciones escritas: 1,358,791 filas
+  Top features:
+                    feature  importance
+     success_rate_hist_pond   19.277170
+            streak_promedio   16.020405
+                 tenure_max   13.463204
+                 tenure_min   12.322419
+                 streak_max   10.229470
+days_since_last_attempt_min    8.561021
+           cum_exitos_total    8.249671
+       n_intentos_30d_total    3.460656
+
+[OK] Artefactos en /Users/ferneyiridian/Documents/dev/unicef_ml/v9_entregable/results/motor2_donante
+[1;32m[OK] M2d · train_motor2_donante  (20s)[0m
+
+[1;34m--------------------------------------------------------------------[0m
+[1;34m[ETAPA] M1 · timing_reintento[0m
+[1;33m> python3 "/Users/fvelasg/Documents/dev/unicef_ml/v9_entregable/scripts/03_train/03_timing_reintento_motor1.py" --cutoff-date 2025-12-31 --run-date 2026-01-03[0m
+[1;34m--------------------------------------------------------------------[0m
+  [config] CUTOFF_DATE = 2025-12-31  (fuente: CLI)
+  [config] RUN_DATE    = 2026-01-03
+  [config] WINDOW      = 12 meses de historia
+  [config] FEATURES    = /Users/ferneyiridian/Documents/dev/unicef_ml/v9_entregable/data/features/motor1_features.parquet  (default)
+  Ventana de intentos: (2024-12-31, 2025-12-31]
+[1/6] Cargando modelo y calibrador...
+  OK
+[2/6] Cargando features del último intento por pledge...
+  Intentos cargados: 2,981,152
+  Rango real de los intentos en ventana: 2025-01-01 → 2025-12-31
+  Pledges activos: 177,883  (fallido: 56,185 | exitoso: 121,698)
+[3/6] Construyendo DataFrame vectorizado (pledge × día)...
+  DataFrame simulado: 5,336,490 filas (177,883 pledges × 30 días)
+[4/6] Inferencia batch (predict_proba)...
+  Inferencia completada en 4.2s
+[5/6] Pivotando resultados y calculando día óptimo...
+[6/6] Guardando resultados...
+
+  Total pledges: 177,883
+  Distribución días recomendados:
+dias_esperar_desde_hoy
+1.0       796
+2.0     94320
+3.0     25872
+4.0      1985
+5.0      4175
+6.0     12064
+7.0      6490
+8.0      1772
+9.0       847
+10.0      362
+11.0      763
+12.0     1213
+13.0     4178
+14.0      680
+15.0      322
+16.0      422
+17.0      460
+18.0      221
+19.0      658
+20.0     3928
+21.0     1647
+22.0     2569
+23.0      594
+24.0       63
+25.0        2
+26.0       29
+27.0     3010
+28.0     1057
+30.0     7384
+  Pledges adelantados por tolerancia log: 86,854 (48.8%)
+  Tiempo total: 44.0s
+  [OK] /Users/ferneyiridian/Documents/dev/unicef_ml/v9_entregable/results/motor1/timing_reintento_motor1.parquet
+  [OK] /Users/ferneyiridian/Documents/dev/unicef_ml/v9_entregable/results/motor1/timing_reintento_motor1.csv
+[1;32m[OK] M1 · timing_reintento  (45s)[0m
+  Timing optimizer: timing_reintento_motor1.csv
+
+[1;34m--------------------------------------------------------------------[0m
+[1;34m[ETAPA] M3 · tabla_donantes_p1_p2[0m
+[1;33m> python3 "/Users/fvelasg/Documents/dev/unicef_ml/v9_entregable/scripts/04_features_motor3/01_tabla_donantes_p1_p2.py" --cutoff-date 2025-12-31[0m
+[1;34m--------------------------------------------------------------------[0m
+  [config] CUTOFF_DATE = 2025-12-31  (fuente: CLI)
+  [P2] columna del mes desde las predicciones de test → p2_dec_2025
+[1/6] Cargando predicciones Motor 1 v4 + payment_id → (pledge_id, attempt_ts)...
+  intentos: 2,981,152
+[2/6] Agregando P1 a nivel pledge...
+  pledges con intentos en 2025: 177,883
+[3/6] Cargando predicciones Motor 2 (snapshots pledge×mes del histórico)...
+  snapshots: 1,374,159  (2025-01 → 2025-12)
+[4/6] Agregando P2 a nivel pledge...
+  pledges con snapshots en el histórico: 171,998
+  pledges con p2_dec_2025 — Dec-2025 (test): 127,736
+[5/6] Cargando atributos del pledge (último estado conocido + Pledge metadata)...
+  atributos por pledge: 177,883
+  Cruzando con Allocation features...
+  tenure_days: min=0, negativos=0 (esperado 0)
+[6/6] Ensamblando tabla final por pledge...
+  timing próximo cobro: 177,883 pledges con recomendación (100.0%)
+
+  Total filas: 177,883
+  Con p2_dec_2025 — Dec-2025 (test): 127,081
+  Distribución tipo_donante:
+tipo_donante
+House          118756
+Prospecting     59127
+Name: count, dtype: int64
+  Distribución pledge_status:
+pledge_status
+Active                 121871
+Cancelled               55856
+Paused                     79
+New                        45
+Enrollment_Rejected        32
+Name: count, dtype: int64
+
+  Stats P1: media=0.535, mediana=0.586
+  Stats P2 (último): media=0.106, p95=0.468
+  Stats P2 (Dec-2025 (test)): n=127,081 | P2>80% = 313 pledges (alta alerta)
+  Stats P2 (Dec-2025 (test)): P2>60% = 456 pledges (alerta)
+
+[OK] /Users/ferneyiridian/Documents/dev/unicef_ml/v9_entregable/data/entregable/Tabla_Donantes_P1_P2_2025_12_31.csv
+[OK] /Users/ferneyiridian/Documents/dev/unicef_ml/v9_entregable/data/entregable/Tabla_Donantes_P1_P2_2025_12_31.parquet
+  Tamaño CSV: 50.5 MB
+[1;32m[OK] M3 · tabla_donantes_p1_p2  (12s)[0m
+  Tabla generada: Tabla_Donantes_P1_P2_2025_12_31.parquet
+[1;34m--------------------------------------------------------------------[0m
+
+[1;34m=====================================================================[0m
+[1;34m  RESUMEN[0m
+[1;34m=====================================================================[0m
+  [1;33mSKIP[0m   00 · unify_raw_data
+  [1;32mPASS[0m   VERIFY: contact_unified   (-)
+  [1;32mPASS[0m   VERIFY: opportunity_unified   (-)
+  [1;32mPASS[0m   VERIFY: pledge_unified   (-)
+  [1;32mPASS[0m   VERIFY: payments_unified   (-)
+  [1;32mPASS[0m   VERIFY: allocation_unified   (-)
+  [1;33mSKIP[0m   01 · create_staging
+  [1;32mPASS[0m   VERIFY: stg_payment_attempts   (-)
+  [1;33mSKIP[0m   M1 · clean_bank_normalization
+  [1;32mPASS[0m   VERIFY: bank_canonical   (-)
+  [1;33mSKIP[0m   M1 · enrich_with_contact
+  [1;32mPASS[0m   VERIFY: motor1_features   (-)
+  [1;33mSKIP[0m   M1 · build_allocation_features
+  [1;32mPASS[0m   VERIFY: allocation_features   (-)
+  [1;32mPASS[0m   M2 · motor2_dataset   (17s)
+  [1;32mPASS[0m   VERIFY: motor2_pledge_month   (-)
+  [1;32mPASS[0m   M1 · train_motor1   (51s)
+  [1;32mPASS[0m   M2 · train_motor2   (62s)
+  [1;32mPASS[0m   M2d · motor2_dataset_donante   (4s)
+  [1;32mPASS[0m   M2d · train_motor2_donante   (20s)
+  [1;32mPASS[0m   M1 · timing_reintento   (45s)
+  [1;32mPASS[0m   M3 · tabla_donantes_p1_p2   (12s)
+
+  Total: [1;32m17 PASS[0m  [1;31m0 FAIL[0m  [1;33m5 SKIP[0m
+  Log completo: /Users/fvelasg/Documents/dev/unicef_ml/v9_entregable/run_all.log
+[1;34m--------------------------------------------------------------------[0m

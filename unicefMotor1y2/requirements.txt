@@ -1,0 +1,18 @@
+# Dependencias del proyecto UNICEF Colombia — Modelos predictivos (v8)
+# Probado con Python 3.11–3.13
+#
+# Instalación recomendada:
+#   python3 -m venv .venv && source .venv/bin/activate
+#   pip install -r requirements.txt
+
+# Core (lectura de datos y manipulación)
+pandas>=2.0,<3.0
+pyarrow>=14.0
+numpy>=1.24
+
+# Modelado
+catboost>=1.2
+scikit-learn>=1.3
+
+# Lectura/escritura de Excel (diccionario de variables)
+openpyxl>=3.1
